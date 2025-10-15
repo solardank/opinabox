@@ -1,0 +1,44 @@
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xfce4 xfce4-terminal x11-xserver-utils xauth xvfb \
+    wget curl ca-certificates gnupg2 procps socat \
+    python3 python3-pip python3-setuptools \
+    supervisor git unzip build-essential \
+    libssl-dev libffi-dev \
+    firefox \
+    net-tools iproute2 iputils-ping \
+  && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install python build deps, create venv, install websockify into venv and populate noVNC
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3-venv python3-pip unzip git curl ca-certificates build-essential python3-dev \
+  && python3 -m venv /opt/venv \
+  && /opt/venv/bin/python -m pip install --upgrade pip setuptools wheel \
+  && /opt/venv/bin/pip install websockify \
+  && mkdir -p /opt/noVNC \
+  && ( git clone --depth 1 https://github.com/novnc/noVNC.git /opt/noVNC || \
+       ( curl -fsSL https://github.com/novnc/noVNC/archive/refs/heads/master.zip -o /tmp/noVNC.zip && \
+         unzip /tmp/noVNC.zip -d /opt && mv /opt/noVNC-master /opt/noVNC ) ) \
+  && ( git clone --depth 1 https://github.com/novnc/websockify /opt/noVNC/utils/websockify || true ) \
+  && rm -rf /var/lib/apt/lists/* /tmp/noVNC.zip
+
+# Create non-root user
+RUN useradd -m -s /bin/bash workspace && mkdir -p /home/workspace && chown -R workspace:workspace /home/workspace
+
+WORKDIR /home/workspace
+
+# Copy supervisor config and start script (must exist)
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+
+# Copy toolbar assets
+COPY opt/onionpress /opt/onionpress
+RUN chown -R workspace:workspace /opt/onionpress
+
+EXPOSE 6901 8080
+
+CMD ["/usr/local/bin/start.sh"]

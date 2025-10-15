@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OnionPress Toolbar</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/opt/onionpress/toolbar.css">
+  <style>
+    body{font-family:system-ui,Arial;margin:16px;background:#0f1724;color:#e6eef8}
+    label{display:block;margin-top:8px}
+    input[type=text], textarea{width:100%;padding:6px;border-radius:6px;border:1px solid #283744;background:#0b1220;color:#e6eef8}
+    button{margin-top:12px;padding:8px 12px;border-radius:6px;background:#0b66ff;color:white;border:0}
+    #qr { display:block; margin-top:12px; width:200px; height:200px; border:1px solid rgba(255,255,255,0.08) }
+    #status{margin-top:12px;color:#d1e7ff}
+  </style>
+</head>
+<body>
+  <h2>OnionPress — Publish & Mint (Dev)</h2>
+
+  <label>Title
+    <input id="title" type="text" placeholder="Article title">
+  </label>
+
+  <label>Article URL
+    <input id="url" type="text" placeholder="https://example.com/article">
+  </label>
+
+  <label>Notes / Free text (optional)
+    <textarea id="freeText" rows="4" placeholder="Short description, tags, editor notes, or context..."></textarea>
+  </label>
+
+  <button id="publish">Publish & Mint</button>
+
+  <div id="status"></div>
+  <div id="seedarea"></div>
+  <img id="qr" alt="QR will appear here" src="">
+
+  <!-- toolbar.js will be loaded below -->
+  <script src="/opt/onionpress/toolbar.js"></script>
+</body>
+</html>

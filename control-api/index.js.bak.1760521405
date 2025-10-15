@@ -1,0 +1,187 @@
+// control-api/index.js (CommonJS)
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const crypto = require('crypto');
+const { ethers } = require('ethers');
+const { createClient } = require('redis');
+const cors = require('cors');
+
+const PORT = process.env.PORT || 3000;
+const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
+const HYPERCERT_ADDR = process.env.HYPERCERT_ADDRESS;
+const ESCROW_ADDR = process.env.ESCROW_ADDRESS;
+const MINTER_KEY = process.env.MINTER_PRIVATE_KEY || process.env.ESCROW_PRIVATE_KEY;
+const ESCROW_KEY = process.env.ESCROW_PRIVATE_KEY;
+const REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+
+if (!HYPERCERT_ADDR) console.warn('Warning: HYPERCERT_ADDRESS not set (set in .env)');
+if (!MINTER_KEY) console.warn('Warning: MINTER_PRIVATE_KEY (or ESCROW_PRIVATE_KEY) not set');
+
+const app = express();
+// ---- BEGIN SIMPLE CORS MIDDLEWARE (DEV) ----
+// Allow cross-origin requests from your dev toolbar (and handle preflight)
+app.use(function (req, res, next) {
+  // reflect origin or allow all - for dev allowing the Origin header is fine
+  const origin = req.headers.origin || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  // allow requested headers or default set
+  const reqHeaders = req.headers['access-control-request-headers'];
+  res.setHeader('Access-Control-Allow-Headers', reqHeaders || 'Content-Type,Authorization');
+
+  // respond to preflight quickly
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    return res.end();
+  }
+  return next();
+});
+// ---- END SIMPLE CORS MIDDLEWARE (DEV) ----
+app.use(bodyParser.json({ limit: '1mb' }));
+app.use(cors({ origin: true, credentials: true }));
+app.options('*', cors());
+// Redis client
+const redis = createClient({ url: REDIS_URL });
+
+async function start() {
+  await redis.connect();
+  console.log('Connected to Redis at', REDIS_URL);
+
+  const provider = new ethers.JsonRpcProvider(RPC_URL);
+  const minterWallet = MINTER_KEY ? new ethers.Wallet(MINTER_KEY, provider) : null;
+  const escrowWallet = ESCROW_KEY ? new ethers.Wallet(ESCROW_KEY, provider) : null;
+
+  // Minimal ABI for needed calls
+  const hypercertAbi = [
+    'function mint(address to, string calldata metadataURI) external returns (uint256)',
+    'function nextId() view returns (uint256)',
+    'function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external'
+  ];
+  const escrowAbi = [
+    'function release(uint256 tokenId, address to) external'
+  ];
+
+  const hyper = HYPERCERT_ADDR ? new ethers.Contract(HYPERCERT_ADDR, hypercertAbi, provider) : null;
+  const escrow = ESCROW_ADDR ? new ethers.Contract(ESCROW_ADDR, escrowAbi, provider) : null;
+
+  app.get('/health', (req, res) => res.json({ ok: true }));
+
+  // Mint endpoint - mints using MINTER_KEY (owner)
+  app.post('/mint', async (req, res) => {
+    try {
+      if (!hyper || !minterWallet) return res.status(500).json({ error: 'Hypercert or minter not configured' });
+      const { to, metadataURI } = req.body;
+      if (!to || !metadataURI) return res.status(400).json({ error: 'missing to or metadataURI' });
+
+      // Read nextId before mint to infer tokenId
+      const nextIdBN = await hyper.connect(minterWallet).nextId();
+      const tokenIdBefore = BigInt(nextIdBN);
+
+      const tx = await hyper.connect(minterWallet).mint(to, metadataURI);
+      const rc = await tx.wait();
+      res.json({
+        ok: true,
+        tokenId: tokenIdBefore.toString(),
+        txHash: rc.transactionHash
+      });
+    } catch (e) {
+      console.error('mint error', e);
+      res.status(500).json({ error: e.message || e.toString() });
+    }
+  });
+
+  // claim/new - store sha256(C) -> { tokenId, encryptedPrivKey, mode } in redis
+  // body: { claimHash, tokenId, encryptedPrivKey, mode, expiry } where mode is 'ephemeral' or 'escrow'
+  app.post('/claim/new', async (req, res) => {
+    try {
+      const { claimHash, tokenId, encryptedPrivKey, mode = 'ephemeral', expiry } = req.body;
+      if (!claimHash || !tokenId) return res.status(400).json({ error: 'missing claimHash or tokenId' });
+      const key = `claim:${claimHash}`;
+      const payload = {
+        tokenId: Number(tokenId),
+        encryptedPrivKey: encryptedPrivKey || '',
+        mode,
+        expiry: expiry ? Number(expiry) : (Math.floor(Date.now() / 1000) + 24 * 3600)
+      };
+      // store as JSON string + set TTL if expiry provided
+      await redis.set(key, JSON.stringify(payload));
+      if (payload.expiry) {
+        const ttl = Math.max(1, payload.expiry - Math.floor(Date.now() / 1000));
+        await redis.expire(key, ttl);
+      }
+      res.json({ ok: true, key, ttl: await redis.ttl(key) });
+    } catch (e) {
+      console.error('claim/new err', e);
+      res.status(500).json({ error: e.message || e.toString() });
+    }
+  });
+
+  // claim/redeem - body: { c, signature } where signature is produced by claimant signing "claim:<c>"
+  app.post('/claim/redeem', async (req, res) => {
+    try {
+      const { c, signature } = req.body;
+      if (!c || !signature) return res.status(400).json({ error: 'missing c or signature' });
+
+      // compute claim hash
+      const hash = crypto.createHash('sha256').update(c).digest('hex');
+      const key = `claim:${hash}`;
+      const recordRaw = await redis.get(key);
+      if (!recordRaw) return res.status(410).json({ error: 'claim not found or expired' });
+      const record = JSON.parse(recordRaw);
+
+      // verify signature -> claimant address
+      const message = `claim:${c}`;
+      let claimant;
+      try {
+        claimant = ethers.verifyMessage(message, signature);
+      } catch (err) {
+        return res.status(400).json({ error: 'invalid signature' });
+      }
+
+      const tokenId = record.tokenId;
+
+      // Two modes: 'escrow' (call escrow.release) or 'ephemeral' (use ephemeral privKey to safeTransferFrom)
+      if (record.mode === 'escrow') {
+        if (!escrow || !escrowWallet) return res.status(500).json({ error: 'escrow not configured' });
+        const escrowWithSigner = escrow.connect(escrowWallet);
+        const tx = await escrowWithSigner.release(tokenId, claimant);
+        const rc = await tx.wait();
+        // delete claim record
+        await redis.del(key);
+        return res.json({ ok: true, txHash: rc.transactionHash });
+      } else {
+        // ephemeral mode: encryptedPrivKey must be present (dev: we accept plaintext privKey)
+        const priv = record.encryptedPrivKey;
+        if (!priv) return res.status(500).json({ error: 'no private key stored for ephemeral transfer' });
+        // for demo we treat encryptedPrivKey as plaintext (DEV ONLY)
+        const walletE = new ethers.Wallet(priv, provider);
+        // build contract connected to walletE
+        if (!hyper) return res.status(500).json({ error: 'hypercert not configured' });
+        const hyperWithE = hyper.connect(walletE);
+        const tx = await hyperWithE.safeTransferFrom(await walletE.getAddress(), claimant, tokenId, 1, "0x");
+        const rc = await tx.wait();
+        await redis.del(key);
+        return res.json({ ok: true, txHash: rc.transactionHash });
+      }
+    } catch (err) {
+      console.error('claim/redeem err', err);
+      res.status(500).json({ error: err.message || err.toString() });
+    }
+  });
+
+  // optional helper: lookup claim by hash (dev)
+  app.get('/claim/:hash', async (req, res) => {
+    const key = `claim:${req.params.hash}`;
+    const v = await redis.get(key);
+    if (!v) return res.status(404).json({ error: 'not found' });
+    res.json({ ok: true, data: JSON.parse(v), ttl: await redis.ttl(key) });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`control-api listening on http://0.0.0.0:${PORT}`);
+  });
+}
+
+start().ca

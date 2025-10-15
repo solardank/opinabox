@@ -1,0 +1,147 @@
+/* toolbar.css — Dark mode (RealFi / Funding the Commons) */
+/* Palette chosen for strong blue + teal accents on dark background */
+
+:root{
+  --bg: #071025;            /* deep navy background */
+  --panel: #081428;         /* slightly lighter panel */
+  --muted: #9aa6b2;         /* muted text */
+  --text: #e6f2ff;         /* primary text */
+  --primary: #3ea0ff;      /* bright RealFi blue */
+  --primary-600: #1f8cff;
+  --accent: #18d4c7;       /* teal accent */
+  --accent-600: #00b3a6;
+  --accent-20: rgba(24,212,199,0.08);
+  --glass: rgba(255,255,255,0.03);
+  --danger: #ff6b6b;
+  --radius: 12px;
+  --shadow: 0 8px 30px rgba(2,8,20,0.7);
+  --max-width: 780px;
+}
+
+/* base */
+* { box-sizing: border-box; }
+body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(62,160,255,0.06), transparent 6%),
+              linear-gradient(180deg, var(--bg), #041023 120%);
+  color: var(--text);
+  margin: 0;
+  padding: 20px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* container */
+.toolbar {
+  max-width: var(--max-width);
+  margin: 12px auto;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+/* header */
+.toolbar h2 {
+  margin: 0;
+  font-family: "Poppins", "Inter", sans-serif;
+  font-weight: 600;
+  color: var(--primary);
+  font-size: 20px;
+  letter-spacing: -0.2px;
+}
+
+/* form fields */
+.field { margin-top: 12px; }
+label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+input[type="text"], textarea {
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.02);
+  font-size:14px;
+  color:var(--text);
+  transition: box-shadow .12s, border-color .12s;
+}
+input[type="text"]::placeholder { color: rgba(255,255,255,0.25); }
+input[type="text"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 6px 26px rgba(31,140,255,0.06), 0 0 0 4px rgba(31,140,255,0.06);
+}
+
+/* buttons */
+.btn {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:10px;
+  border: none;
+  cursor: pointer;
+  font-weight:600;
+  font-size:14px;
+  color: white;
+  background: linear-gradient(180deg,var(--primary),var(--primary-600));
+  box-shadow: 0 8px 30px rgba(31,140,255,0.12);
+  transition: transform .08s ease, box-shadow .12s ease, filter .12s;
+}
+.btn:active { transform: translateY(1px); }
+.btn.secondary {
+  background: linear-gradient(180deg,var(--accent),var(--accent-600));
+  box-shadow: 0 6px 18px rgba(0,179,166,0.08);
+}
+
+/* status + seed */
+#status {
+  margin-top:12px;
+  padding:10px;
+  border-radius:10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.03);
+  color: var(--text);
+  font-size:13px;
+}
+#seedarea {
+  margin-top:12px;
+  padding:12px;
+  border-radius:10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.03);
+}
+#seedarea pre {
+  margin:8px 0 0;
+  background: #021028;
+  color: #cfeeff;
+  padding:10px;
+  border-radius:8px;
+  overflow:auto;
+  font-size:13px;
+}
+
+/* QR */
+#qr {
+  display:block;
+  margin-top:14px;
+  width:200px;
+  height:200px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.04);
+  background: linear-gradient(180deg,#071225,#061724);
+}
+
+/* meta */
+.small { color: var(--muted); font-size:12px; margin-top:10px; }
+
+/* responsive */
+@media (max-width:640px){
+  .toolbar { padding:14px; border-radius:10px; }
+  #qr { width:160px; height:160px; }
+}
+
+/* toggle helper (optional) */
+.dark-toggle {
+  display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted);
+}

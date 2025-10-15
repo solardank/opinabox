@@ -1,0 +1,19 @@
+cat > kasm-workspace/start.sh <<'EOF'
+#!/usr/bin/env bash
+set -e
+export DISPLAY=:1
+chown -R workspace:workspace /home/workspace || true
+
+# Ensure websockify is executable location check
+if [ -x /usr/local/bin/websockify ]; then
+  WEBSE=/usr/local/bin/websockify
+else
+  WEBSE=/usr/bin/websockify
+fi
+
+# rewrite websockify command in supervisord if path differs (optional)
+sed -i "s|/usr/local/bin/websockify|$WEBSE|g" /etc/supervisor/conf.d/supervisord.conf || true
+
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+EOF
+chmod +x kasm-workspace/start.sh

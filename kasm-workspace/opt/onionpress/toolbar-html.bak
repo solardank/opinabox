@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OnionPress Toolbar</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Poppins:wght@600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/opt/onionpress/toolbar.css">
+  <style>
+    body{font-family:system-ui,Arial;margin:16px}
+    label{display:block;margin-top:8px}
+    input[type=text]{width:100%;padding:6px}
+    button{margin-top:12px;padding:8px 12px}
+    pre{background:#111;color:#efe;padding:8px;border-radius:6px;overflow:auto}
+    #qr { display:block; margin-top:12px; width:200px; height:200px; border:1px solid #ddd }
+  </style>
+</head>
+<body>
+  <h2>OnionPress — Publish & Mint (Dev)</h2>
+  <label>Title <input id="title" type="text" placeholder="Article title"></label>
+  <label>Article URL <input id="url" type="text" placeholder="https://example.com/article"></label>
+  <button id="publish">Publish & Mint</button>
+
+  <div id="status" style="margin-top:12px"></div>
+  <div id="seedarea"></div>
+  <img id="qr" alt="QR will appear here" src="">
+
+  <script>
+    // let toolbar.js be inline or include external script if you prefer
+  </script>
+
+  <script src="/opt/onionpress/toolbar.js"></script>
+</body>
+</html>

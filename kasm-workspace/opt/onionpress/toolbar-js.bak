@@ -1,0 +1,73 @@
+// toolbar.js — ephemeral wallet + mint + claim (dev mode)
+(async function(){
+  const CONTROL_API_URL = window.CONTROL_API_URL || 'http://control-api:3000'; // inside VDI this resolves via compose
+  const statusEl = id => document.getElementById(id) || null;
+
+  // helper: sha256 hex
+  async function sha256hex(text){
+    const enc = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest('SHA-256', enc);
+    return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function createEphemeralWallet(){
+    return ethers.Wallet.createRandom(); // ethers v6 in global
+  }
+
+  async function postClaim(claimHash, priv){
+    try {
+      const res = await fetch(`${CONTROL_API_URL}/claim/new`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ claim: claimHash, priv })
+      });
+      return res.json();
+    } catch(e){ console.warn('claim post error', e); return { error: e.message } }
+  }
+
+  async function mint(toAddr, metadataURI){
+    try {
+      const res = await fetch(`${CONTROL_API_URL}/mint`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ to: toAddr, metadataURI })
+      });
+      return res.json();
+    } catch(e){ return { error: e.message } }
+  }
+
+  document.getElementById('publish').addEventListener('click', async ()=>{
+    const title = document.getElementById('title').value.trim() || 'Untitled';
+    const url = document.getElementById('url').value.trim();
+    const status = document.getElementById('status');
+    const seedarea = document.getElementById('seedarea');
+    const qr = document.getElementById('qr');
+
+    if(!url){ status.textContent='Please provide a URL'; return; }
+
+    status.textContent = 'Generating ephemeral wallet...';
+    const wallet = createEphemeralWallet();
+    seedarea.innerHTML = `<b>Ephemeral address:</b> ${wallet.address}
+      <div><b>Private key (PHOTO THIS):</b><pre>${wallet.privateKey}</pre></div>`;
+
+    // build claim & metadata
+    const claimInput = JSON.stringify({ title, url });
+    const claimHash = await sha256hex(claimInput);
+
+    // post claim (dev flow: plaintext priv)
+    status.textContent = 'Storing claim...';
+    const claimRes = await postClaim(claimHash, wallet.privateKey);
+
+    status.textContent = 'Calling mint...';
+    const metadata = JSON.stringify({ title, url, claimHash, ts: new Date().toISOString() });
+    const mintRes = await mint(wallet.address, metadata);
+
+    if(mintRes.ok){
+      status.textContent = `Minted token ${mintRes.tokenId} tx ${mintRes.txHash} → ${wallet.address}`;
+      const payload = JSON.stringify({ tokenId: mintRes.tokenId, tx: mintRes.txHash, address: wallet.address });
+      qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(payload)}`;
+    } else {
+      status.textContent = 'Mint failed: '+(mintRes.error||JSON.stringify(mintRes));
+    }
+  });
+})();

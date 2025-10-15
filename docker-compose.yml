@@ -1,0 +1,67 @@
+services:
+  # Redis for claim storage
+  redis:
+    image: redis:7
+    container_name: onionpress-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  # control-api (built from ./control-api)
+  control-api:
+    build: ./control-api
+    container_name: onionpress-control-api
+    env_file:
+      - ./control-api/.env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - redis
+
+  # workspace (kasm/noVNC + static toolbar)
+  workspace:
+    build:
+      context: ./kasm-workspace
+    container_name: onionpress-kasm-workspace
+    environment:
+      - DISPLAY=:1
+      - CONTROL_API=http://control-api:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "6901:6901"
+      - "8080:8080"
+    depends_on:
+      - control-api
+
+  # local hardhat node (containerized)
+  hardhat:
+    image: node:22-bullseye
+    container_name: onionpress-hardhat
+    working_dir: /app
+    volumes:
+      - ./contracts:/app
+    command: bash -lc "npm install --no-audit --no-fund || true && npx hardhat node --hostname 0.0.0.0"
+    ports:
+      - "8545:8545"
+    restart: unless-stopped
+
+  # Tor SOCKS5 proxy container
+  torproxy:
+    image: dperson/torproxy:latest
+    container_name: onionpress-torproxy
+    restart: unless-stopped
+    ports:
+      - "9050:9050"
+      - "8118:8118"
+    healthcheck:
+      test: ["CMD", "curl", "-sS", "http://127.0.0.1:8118/"]  # or socks test
+      interval: 30s
+      timeout: 30s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  redis-data:

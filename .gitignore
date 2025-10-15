@@ -1,2 +1,19 @@
 .env
 control-api/control-api.log
+control-api/.env
+control-api/node_modules
+kasm-workspace/node_modules
+
+# Local secrets, backups and dumps (do not commit)
+# control-api env backups
+control-api.env*
+# any .env files
+*.env
+# editor/IDE files
+.vscode/
+# redis dumps / DB exports
+redis-dump-*.rdb
+# avoid committing docker-compose local override files (if you want)
+docker-compose.override.yml
+# temp / build artifacts
+/tmp/

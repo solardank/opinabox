@@ -1,0 +1,25 @@
+.exit
+}
+  try { console.log(i, accounts[i], (await hyper.balanceOf(accounts[i], tokenId)).toString()); } catch(e){ console.log(i,'err',e.message);}
+for (let i=0;i<6;i++){
+console.log("balanceOf for first 6 accounts:");
+console.log("RPC eth_accounts:", accounts);
+const accounts = await ethers.provider.send("eth_accounts", []);
+const tokenId = Number(process.env.TOKEN_ID || 1);
+const hyper = await ethers.getContractAt("Hypercert", process.env.HYPERCERT_ADDR || "0x5FbDB2315678afecb367f032d93F642f64180aa3");
+.exit
+const hyper = await ethers.getContractAt("Hypercert", process.env.HYPERCERT_ADDR || "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+.exit
+const accounts = await ethers.provider.send("eth_accounts",[]); console.log("eth_accounts:", accounts);
+try { const esc = await ethers.getContractAt("HypercertEscrow", ESC); console.log("escrow owner:", await esc.owner()); } catch(e){ console.log("escrow owner read failed:", e.message); }
+try { const hyper = await ethers.getContractAt("Hypercert", HYP); console.log("hyper.owner:", await hyper.owner()); } catch(e){ console.log("hyper owner read failed:", e.message); }
+console.log("escrow code length:", codeE.length);
+console.log("hypercert code length:", codeH.length);
+const codeE = await ethers.provider.getCode(ESC);
+const codeH = await ethers.provider.getCode(HYP);
+const ESC = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+const HYP = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+console.log("eth_accounts:", accounts);
+const accounts = await ethers.provider.send("eth_accounts", []);
+console.log("Signers:", signers.map(s => s.address));
+const signers = await ethers.getSigners();
