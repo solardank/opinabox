@@ -1,10 +1,27 @@
-# OnionPress — “OnionPress in a Box”
+# Hyperleaks — “OnionPress in a Box”
 
 **A self-contained dev/demo stack** for anonymous (Tor-routed) publishing + minting Hypercerts from a browser VDI.
 
 > Spin up the stack with Docker Compose, open the Kasm/noVNC VDI, use the toolbar to **Publish & Mint** (creates an ephemeral wallet, mints a Hypercert to it, shows a QR/seed), then reclaim the token later by importing the ephemeral key or calling the control API.
 
 ---
+## Key components — what they are (quick links)
+
+- **Hypercert** — [Hypercerts](https://hypercerts.org/) (and the related GitHub org) are a model and set of smart-contract primitives for representing *credits* (non-fungible or semi-fungible tokens) that capture contributions, claims, and value in digital public goods and funding systems. In this project a **Hypercert** is the on-chain token minted to an ephemeral address to represent the published article and the associated claim.  
+  - Learn more: https://hypercerts.org/ · GitHub org: https://github.com/hypercerts
+
+- **Kasm Workspace (noVNC VDI)** — [Kasm Workspaces](https://www.kasmweb.com/) is a commercial/open-source-style VDI (virtual desktop infrastructure) solution that provides browser-accessible containerized desktops and browser sandboxes. In this demo we run a lightweight noVNC-based workspace container that exposes a small toolbar UI — the journalist uses the browser-accessible VDI to author/publish while the underlying container enforces isolation from the public endpoint.  
+  - Learn more / Kasm: https://www.kasmweb.com/ · noVNC: https://github.com/novnc/noVNC
+
+---
+
+## Acknowledgements
+
+This project builds on ideas and prototype work from the *Onion Press* concept. Special thanks and attribution to the original Onion Press repo and author:
+
+- **Onion Press (inspiration)** — vpavlin / onion-press. See: https://github.com/vpavlin/onion-press
+- **Internet Archive** — [Internet Archive](https://archive.org/) is a non-profit digital library offering long-term archiving of web pages, books, audio, and other digital artifacts. The OnionPress concept (and this demo) intends to use archival mirrors (Internet Archive or similar) as persistent publication endpoints so that a journalist’s work can be preserved and referenced by the minted Hypercert metadata.  
+  - Learn more: https://archive.org/
 
 ## Table of contents
 
